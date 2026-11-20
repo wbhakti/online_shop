@@ -149,7 +149,7 @@ class ProdukTerendahController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('sb-admin-2.laporan.terendah', compact(
+        return view('admin.laporan.terendah', compact(
             'products',
             'summary',
             'periode',

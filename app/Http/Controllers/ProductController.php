@@ -24,7 +24,7 @@ class ProductController extends Controller
             $dataProducts = Product::with('category')->get();
             $dataCatagories = Category::get();
 
-            return view('sb-admin-2/masterproduk', [
+            return view('admin/masterproduk', [
                 'products' => $dataProducts,
                 'catagories' => $dataCatagories
             ]);
@@ -162,7 +162,7 @@ class ProductController extends Controller
 
             $dataCatagories = Category::get();
 
-            return view('sb-admin-2/masterkategori', [
+            return view('admin/masterkategori', [
                 'data' => $dataCatagories
             ]);
 

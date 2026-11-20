@@ -1,7 +1,6 @@
-@extends('sb-admin-2.layouts.app')
+@extends('admin.layouts.app')
 
 @section('content')
-
 <!-- CSS custom -->
 <link href="{{ asset('vendor/datatables/dataTables.bootstrap4.min.css') }}" rel="stylesheet" type="text/css">
 
@@ -27,9 +26,30 @@
 <div class="card shadow mb-4 custom-card-header">
     <div class="card-header py-3">
         <div align="center">
-            <h1 class="h3 mb-4 text-gray-800">Data Transaksi Hari Ini</h1>
+            <h1 class="h3 mb-4 text-gray-800">Data Transaksi</h1>
         </div>
-        <!-- <meta name="vapid-public-key" content="{{ config('webpush.vapid.public_key') }}"> -->
+    
+        <form method="GET" action="/dashboard/transaction">
+            <div class="row justify-content-center">
+                <div class="col-sm-4">
+                    <div class="mb-3">
+                        <label for="date_start" class="form-label">Tanggal Awal</label>
+                        <input type="date" class="form-control" id="date_start" name="date_start" 
+                            value="{{ isset($date_start) ? $date_start : old('date_start') }}" required>
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="mb-3">
+                        <label for="date_end" class="form-label">Tanggal Akhir</label>
+                        <input type="date" class="form-control" id="date_end" name="date_end" 
+                            value="{{ isset($date_end) ? $date_end : old('date_end') }}" required>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center">
+                <button type="submit" class="btn btn-success" name="action" value="report">Tampilkan Data</button>
+            </div>
+        </form>
     </div>
     
     <div class="card-body">
@@ -38,10 +58,9 @@
                 <thead>
                     <tr>
                         <th>No</th>
-                        <th>ID Transaksi</th>
+                        <th>Nomer Invoice</th>
                         <th>Tanggal Transaksi</th>
                         <th>Pembeli</th>
-                        <th>STATUS</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -50,22 +69,22 @@
                         @foreach ($data as $item)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
-                                <td>{{ $item->id_transaksi }}</td>
-                                <td>{{ $item->addtime }}</td>
+                                <td>{{ $item->invoice_number }}</td>
+                                <td>{{ $item->created_at }}</td>
                                 <td>{{ $item->customer }}</td>
-                                <td>{{ $item->status }}</td>
                                 <td>
                                     <div class="button-group">
                                         <button type="button" class="btn btn-info mb-2 btn-detail"
-                                                data-id="{{ $item->id_transaksi }}"
+                                                data-id="{{ $item->transaction_id }}"
+                                                data-invoice="{{ $item->invoice_number }}"
                                                 data-nama="{{ $item->customer }}"
-                                                data-total="{{ $item->total_bayar }}"
-                                                data-metode="{{ $item->metode_bayar }}"
-                                                data-meja="{{ $item->meja }}"
-                                                data-bukti="{{ $item->bukti_bayar }}"
-                                                data-tgl="{{ $item->addtime }}"
-                                                data-status="{{ $item->status }}"
-                                                data-menu='@json($item->details)'>Detail</button>                                
+                                                data-total="{{ $item->grand_total }}"
+                                                data-metode="{{ $item->payment_method }}"
+                                                data-meja="{{ $item->table_id }}"
+                                                data-bukti="{{ $item->payment_proof }}"
+                                                data-tgl="{{ $item->created_at }}"
+                                                data-status="{{ $item->order_status }}"
+                                                data-details="{{ $item->details }}" >Detail</button>                                
                                     </div>
                                 </td>                                
                             </tr>
@@ -94,12 +113,13 @@
                 </div>
                 <div class="modal-body">
                     <p><b>Tgl Transaksi:</b> <span id="detailTgl"></span></p>
-                    <p><b>ID Transaksi:</b> <span id="detailId"></span></p>
+                    <p><b>Id Transaksi:</b> <span id="detailId"></span></p>
+                    <p><b>Nomer Invoice:</b> <span id="detailInvoice"></span></p>
                     <p><b>Nama Pembeli:</b> <span id="detailNama"></span></p>
                     <p><b>Nomor Meja:</b> <span id="detailMeja"></span></p>
                     <p><b>Total Bayar:</b> <span id="detailTotal"></span></p>
                     <p><b>Metode Bayar:</b> <span id="detailMetode"></span></p>
-                    <p><b>Status: <span id="detailStatus"></span> </b></p>
+                    <p><b>Status:</b> <span id="detailStatus"></span></p>
                     <p><b>Bukti Bayar:</b> 
                         <a id="detailBuktiLink" href="#" target="_blank">
                             <img id="detailBuktiImg" src="" alt="Bukti Bayar" style="max-width: 100px; max-height: 100px;">
@@ -121,9 +141,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" id="btnProses" class="btn btn-primary" data-id="detailId">PROSES</button>
-                    <button type="submit" id="btnSelesai" class="btn btn-primary">SELESAI</button>
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success" id="btnLunas">LUNAS</button>
                 </div>
             </div>
         </div>
@@ -161,13 +180,14 @@
 <script>
     $(document).on('click', '.btn-detail', function() {
     var id = $(this).data('id');
+    var invoice = $(this).data('invoice');
     var nama = $(this).data('nama');
     var total = $(this).data('total');
     var metode = $(this).data('metode');
     var meja = $(this).data('meja');
     var bukti = $(this).data('bukti');
     var tgl = $(this).data('tgl');
-    var menuData = $(this).data('menu'); // Ambil data menu
+    var details = $(this).data('details');
     var status = $(this).data('status');
 
     $('#detailId').text(id);
@@ -176,23 +196,8 @@
     $('#detailMetode').text(metode);
     $('#detailMeja').text(meja);
     $('#detailTgl').text(tgl);
-    
-
-    if (status == "") {
-        $('#detailStatus').text('PENDING');
-        $('#btnSelesai').hide();
-        $('#btnProses').show();
-    }
-    else if (status == "DIPROSES"){
-        $('#btnSelesai').show();
-        $('#btnProses').hide();
-        $('#detailStatus').text(status);
-    } else if (status == "SELESAI"){
-        $('#btnProses').hide();
-        $('#btnSelesai').hide();
-        $('#detailStatus').text(status);
-    }
-
+    $('#detailStatus').text(status);
+    $('#detailInvoice').text(invoice);
     
 
     if (bukti) {
@@ -204,16 +209,14 @@
     }
 
     try {
-        var menuArray = JSON.parse(JSON.parse(menuData));
         var menuList = "";
-
-        menuArray.forEach(function(menu) {
+        details.forEach(function(item) {
             menuList += `
                 <tr>
-                    <td>${menu.menu_id}</td>
-                    <td>-</td>
-                    <td>${menu.quantity}</td>
-                    <td>Rp ${menu.price.toLocaleString()}</td>
+                    <td>${item.product_name}</td>
+                    <td>${item.note}</td>
+                    <td>${item.quantity}</td>
+                    <td>Rp ${item.price.toLocaleString()}</td>
                 </tr>`;
         });
 
@@ -223,11 +226,19 @@
         $('#detailMenuTable').html("<tr><td colspan='4'>Format menu tidak valid.</td></tr>");
     }
 
+    let btnLunas = $('#btnLunas');
+    btnLunas.data('id', id);
+    if (status === "KONFIRMASI") {
+        btnLunas.show().prop('disabled', false);
+    }  else {
+        btnLunas.hide();
+    }
+
     $('#detailModal').modal('show');
 });
 
-$('#btnSelesai').on('click', function() {
-    var transaksiId = $('#detailId').text();
+$('#btnLunas').on('click', function() {
+    var transaksiId = $(this).data('id');
 
     if (!transaksiId) {
         alert("ID transaksi tidak ditemukan!");
@@ -239,12 +250,12 @@ $('#btnSelesai').on('click', function() {
         type: "POST",
         data: {
             id: transaksiId,
-            status: "SELESAI",
             _token: "{{ csrf_token() }}"
         },
         success: function(response) {
             alert(response.message);
-            $('#detailStatus').text("SELESAI");
+            $('#detailStatus').text("LUNAS");
+            $('#btnLunas').prop('disabled', true);
             $('#detailModal').modal('hide');
             location.reload();
         },
@@ -254,55 +265,7 @@ $('#btnSelesai').on('click', function() {
         }
     });
 });
-
-$('#btnProses').on('click', function() {
-    var transaksiId = $('#detailId').text();
-
-    if (!transaksiId) {
-        alert("ID transaksi tidak ditemukan!");
-        return;
-    }
-
-    $.ajax({
-        url: "{{ route('updatestatus') }}",
-        type: "POST",
-        data: {
-            id: transaksiId,
-            status: "DIPROSES",
-            _token: "{{ csrf_token() }}"
-        },
-        success: function(response) {
-            alert(response.message);
-            $('#detailStatus').text("DIPROSES");
-            $('#detailModal').modal('hide');
-            location.reload();
-        },
-        error: function(xhr, status, error) {
-            console.error("Error updating status:", error);
-            alert("Gagal memperbarui status transaksi. Coba lagi!");
-        }
-    });
-});
-
 
 </script>    
-
-<script>
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-        .replace(/-/g, '+')
-        .replace(/_/g, '/');
-
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-
-    return outputArray;
-}
-</script>
 
 @endsection

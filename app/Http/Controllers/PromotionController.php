@@ -27,7 +27,7 @@ class PromotionController extends Controller {
             $dataProducts = Product::get();
             $dataCatagories = Category::get();
 
-            return view('sb-admin-2/masterpromotions', [
+            return view('admin/masterpromotions', [
                 'promotions' => $dataPromotion,
                 'products' => $dataProducts,
                 'categories' => $dataCatagories

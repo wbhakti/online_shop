@@ -230,6 +230,36 @@ Route::prefix('laporan/penjualan')
 */
 
 Route::post('/CloseOrder', 'App\Http\Controllers\AdminController@CloseOrder');
+// ADMIN ORDER MANAGEMENT
+Route::get('/dashboard/orders', [
+    App\Http\Controllers\AdminController::class,
+    'orderList'
+])->name('admin.orders');
+
+Route::get('/dashboard/orders/{id}', [
+    App\Http\Controllers\AdminController::class,
+    'orderDetail'
+])->name('admin.orders.detail');
+
+Route::post('/dashboard/orders/{id}/payment/approve', [
+    App\Http\Controllers\AdminController::class,
+    'approvePayment'
+])->name('admin.orders.payment.approve');
+
+Route::post('/dashboard/orders/{id}/payment/reject', [
+    App\Http\Controllers\AdminController::class,
+    'rejectPayment'
+])->name('admin.orders.payment.reject');
+
+Route::post('/dashboard/orders/{id}/status', [
+    App\Http\Controllers\AdminController::class,
+    'updateOrderStatus'
+])->name('admin.orders.status');
+
+Route::post('/dashboard/orders/{id}/shipping', [
+    App\Http\Controllers\AdminController::class,
+    'updateShipping'
+])->name('admin.orders.shipping');
 
 
 /*

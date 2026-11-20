@@ -1,5 +1,5 @@
 
-@extends('sb-admin-2.layouts.app')
+@extends('admin.layouts.app')
 
 @section('content')
 

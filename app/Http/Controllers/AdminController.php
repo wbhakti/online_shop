@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use App\Models\User;
@@ -13,7 +14,7 @@ class AdminController extends Controller
 {
     public function Login()
     {
-        return view('sb-admin-2/login');
+        return view('admin/login');
     }
 
     public function postlogin(Request $request)
@@ -54,7 +55,7 @@ class AdminController extends Controller
             return redirect()->route('Login')->with('error', 'You must be logged in to access the menu.');
         }
 
-        return view('sb-admin-2/dashboard');
+        return view('admin/dashboard');
     }
 
     public function MasterMerchant()
@@ -66,7 +67,7 @@ class AdminController extends Controller
             }
 
             $dataMerchant = DB::table('merchants')->get();
-            return view('sb-admin-2/mastermerchant', [
+            return view('admin/mastermerchant', [
                 'data' => $dataMerchant
             ]);
 
@@ -138,7 +139,7 @@ class AdminController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
             
-                return view('sb-admin-2/mastertransaksi', [
+                return view('admin/mastertransaksi', [
                     'data' => $dataTransaksi,
                     'date_start' => $request->date_start,
                     'date_end' => $request->date_end,
@@ -164,7 +165,7 @@ class AdminController extends Controller
                 ->orderByDesc('created_at')
                 ->get();
 
-            return view('sb-admin-2/transaksi', [
+            return view('admin/transaksi', [
                 'data' => $dataTransaksi
             ]);
 
@@ -206,7 +207,7 @@ class AdminController extends Controller
             }
 
             $closeorder = DB::table('configuration')->where('parameter', 'close_order')->first();
-            return view('sb-admin-2/settingorder', [
+            return view('admin/settingorder', [
                 'data' => $closeorder
             ]);
 
@@ -252,7 +253,7 @@ class AdminController extends Controller
             }
 
             $dataPromo = DB::table('configuration')->where('parameter', 'popup_banner')->get();
-            return view('sb-admin-2/masterpromo', [
+            return view('admin/masterpromo', [
                 'data' => $dataPromo
             ]);
 
@@ -329,7 +330,7 @@ class AdminController extends Controller
             }
 
             $dataPromo = DB::table('configuration')->where('parameter', 'diskon')->get();
-            return view('sb-admin-2/masterdiskon', [
+            return view('admin/masterdiskon', [
                 'data' => $dataPromo
             ]);
 
@@ -417,5 +418,217 @@ class AdminController extends Controller
         return response()->json([
             'success' => true
         ]);
+    }
+
+    // ========================================
+    // ADMIN ORDER LIST
+    // ========================================
+    public function orderList(Request $request)
+    {
+        if (!session()->has('user_id')) {
+            return redirect()->route('Login')
+                ->with('error', 'Silakan login terlebih dahulu.');
+        }
+
+        $query = Transaction::with(['customer', 'details'])
+            ->orderByDesc('created_at');
+
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
+
+        if ($request->filled('order_status')) {
+            $query->where('order_status', $request->order_status);
+        }
+
+        if ($request->filled('keyword')) {
+            $keyword = $request->keyword;
+
+            $query->where(function ($q) use ($keyword) {
+                $q->where('invoice_number', 'like', "%{$keyword}%")
+                ->orWhere('transaction_id', $keyword);
+            });
+        }
+
+        $orders = $query->paginate(15)->withQueryString();
+
+        return view('admin.orders.index', compact('orders'));
+    }
+
+
+    // ========================================
+    // ADMIN ORDER DETAIL
+    // ========================================
+    public function orderDetail($id)
+    {
+        if (!session()->has('user_id')) {
+            return redirect()->route('Login')
+                ->with('error', 'Silakan login terlebih dahulu.');
+        }
+
+        $order = Transaction::with(['customer', 'details'])
+            ->where('transaction_id', $id)
+            ->firstOrFail();
+
+        return view('admin.orders.detail', compact('order'));
+    }
+
+
+    // ========================================
+    // APPROVE PAYMENT
+    // ========================================
+    public function approvePayment($id)
+    {
+        if (!session()->has('user_id')) {
+            return back()->with('error', 'Silakan login terlebih dahulu.');
+        }
+
+        $order = Transaction::where('transaction_id', $id)->firstOrFail();
+
+        if ($order->payment_status === 'PAID') {
+            return back()->with('error', 'Pembayaran sudah dikonfirmasi.');
+        }
+
+        if (empty($order->payment_proof)) {
+            return back()->with('error', 'Bukti pembayaran belum diunggah customer.');
+        }
+
+        if ($order->order_status !== 'UNPAID') {
+            return back()->with('error', 'Status order tidak memungkinkan verifikasi pembayaran.');
+        }
+
+        DB::transaction(function () use ($order) {
+            $order->payment_status = 'PAID';
+            $order->order_status = 'PAID';
+            $order->save();
+        });
+
+        return redirect()
+            ->route('admin.orders.detail', $id)
+            ->with('success', 'Pembayaran berhasil dikonfirmasi.');
+    }
+
+
+    // ========================================
+    // REJECT PAYMENT
+    // ========================================
+    public function rejectPayment(Request $request, $id)
+    {
+        if (!session()->has('user_id')) {
+            return back()->with('error', 'Silakan login terlebih dahulu.');
+        }
+
+        $request->validate([
+            'rejection_reason' => 'required|string|max:500',
+        ]);
+
+        $order = Transaction::where('transaction_id', $id)->firstOrFail();
+
+        if ($order->payment_status === 'PAID') {
+            return back()->with('error', 'Pembayaran sudah dikonfirmasi dan tidak dapat ditolak.');
+        }
+
+        if (empty($order->payment_proof)) {
+            return back()->with('error', 'Tidak ada bukti pembayaran untuk ditolak.');
+        }
+
+        if ($order->order_status !== 'UNPAID') {
+            return back()->with('error', 'Status order tidak memungkinkan penolakan pembayaran.');
+        }
+
+        $oldNotes = trim((string) $order->notes);
+        $rejectionNote = '[PAYMENT REJECTED] ' . $request->rejection_reason;
+
+        $order->payment_status = 'UNPAID';
+        $order->order_status = 'UNPAID';
+        $order->notes = $oldNotes
+            ? $oldNotes . "\n" . $rejectionNote
+            : $rejectionNote;
+
+        // Bukti lama tetap disimpan sebagai riwayat.
+        $order->save();
+
+        return redirect()
+            ->route('admin.orders.detail', $id)
+            ->with('success', 'Bukti pembayaran ditolak. Customer perlu mengunggah bukti baru.');
+    }
+
+
+    // ========================================
+    // UPDATE ORDER STATUS
+    // ========================================
+    public function updateOrderStatus(Request $request, $id)
+    {
+        if (!session()->has('user_id')) {
+            return back()->with('error', 'Silakan login terlebih dahulu.');
+        }
+
+        $request->validate([
+            'order_status' => 'required|in:PROCESSING,COMPLETED,CANCELLED',
+        ]);
+
+        $order = Transaction::where('transaction_id', $id)->firstOrFail();
+
+        $newStatus = $request->order_status;
+
+        // Hanya order yang pembayarannya sudah terverifikasi
+        // yang boleh diproses atau diselesaikan.
+        if (in_array($newStatus, ['PROCESSING', 'COMPLETED'])
+            && $order->payment_status !== 'PAID') {
+            return back()->with('error', 'Pembayaran harus terverifikasi terlebih dahulu.');
+        }
+
+        // Validasi urutan status.
+        if ($newStatus === 'PROCESSING' && $order->order_status !== 'PAID') {
+            return back()->with('error', 'Order harus berstatus PAID sebelum diproses.');
+        }
+
+        if ($newStatus === 'COMPLETED' && $order->order_status !== 'PROCESSING') {
+            return back()->with('error', 'Order harus berstatus PROCESSING sebelum diselesaikan.');
+        }
+
+        if ($order->order_status === 'COMPLETED'
+            || $order->order_status === 'CANCELLED') {
+            return back()->with('error', 'Order sudah berada pada status akhir.');
+        }
+
+        if ($newStatus === 'CANCELLED' && $order->order_status === 'PROCESSING') {
+            return back()->with('error', 'Order yang sedang diproses perlu ditangani melalui prosedur pembatalan.');
+        }
+
+        $order->order_status = $newStatus;
+        $order->save();
+
+        return back()->with('success', 'Status order berhasil diperbarui.');
+    }
+
+
+    // ========================================
+    // UPDATE SHIPPING INFORMATION
+    // ========================================
+    public function updateShipping(Request $request, $id)
+    {
+        if (!session()->has('user_id')) {
+            return back()->with('error', 'Silakan login terlebih dahulu.');
+        }
+
+        $request->validate([
+            'shipping_courier' => 'required|string|max:100',
+            'shipping_service' => 'nullable|string|max:100',
+            'tracking_number' => 'required|string|max:100',
+        ]);
+
+        $order = Transaction::where('transaction_id', $id)->firstOrFail();
+
+        if (!in_array($order->order_status, ['PROCESSING'])) {
+            return back()->with('error', 'Informasi pengiriman hanya dapat diisi saat order sedang diproses.');
+        }
+
+        $order->shipping_courier = $request->shipping_courier;
+        $order->shipping_service = $request->shipping_service;
+        $order->tracking_number = $request->tracking_number;
+        $order->save();
+
+        return back()->with('success', 'Informasi pengiriman berhasil disimpan.');
     }
 }

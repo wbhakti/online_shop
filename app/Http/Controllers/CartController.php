@@ -834,8 +834,8 @@ class CartController extends Controller
                 ->where('transaction_id', $request->input('idtransaksi'))
                 ->update([
                     'payment_proof' => $filename,
-                    'order_status' => 'PAID',
-                    'payment_status' => 'PAID',
+                    'order_status' => 'UNPAID',
+                    'payment_status' => 'UNPAID',
                     'updated_at' => Carbon::now('Asia/Jakarta')
                         ->format('Y-m-d H:i:s'),
                 ]);

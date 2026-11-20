@@ -80,7 +80,7 @@ class ProdukTerlarisController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('sb-admin-2.laporan.terlaris', [
+        return view('admin.laporan.terlaris', [
             'periode' => $periode,
             'keyword' => $keyword,
             'startDate' => $startDate,

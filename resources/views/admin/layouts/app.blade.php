@@ -20,6 +20,7 @@
     <script src="{{ asset('vendor/jquery/jquery.min.js')}}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="{{ asset('css/sb-admin-2.min.css') }}" rel="stylesheet">
+
     <style>
     .sidebar {
         background-color: #c71a18;
@@ -120,18 +121,10 @@
             </div>
             </li>
             <li class="nav-item">
-                <!-- <a class="nav-link" href="{{ url('dashboard/transaction') }}"> -->
-                <!-- <i class="fas fa-fw fa-chart-area"></i> -->
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseThree"
-                aria-expanded="true" aria-controls="collapseThree">
-                <i class="fas fa-fw fa-cog"></i>
-                <span>Order</span>
+                <a class="nav-link" href="{{ route('admin.orders') }}">
+                    <i class="fas fa-fw fa-shopping-cart"></i>
+                    <span>Order</span>
                 </a>
-                <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                         <a class="collapse-item" href="{{ url('dashboard/transaction') }}">Transaksi</a>
-                    </div>
-                </div>
             </li>
             
             <!-- Nav Item - Laporan -->
@@ -214,12 +207,12 @@
                         Per Kategori
                     </a>
 
-
+                    
                     <!-- ========================= -->
                     <!-- PEMBAYARAN -->
                     <!-- ========================= -->
 
-                    <h6 class="collapse-header">
+                    <!--<h6 class="collapse-header">
                         Pembayaran
                     </h6>
 
@@ -245,13 +238,13 @@
                     href="{{ url('laporan/pembayaran/edc') }}">
                         <i class="fas fa-credit-card fa-fw mr-2"></i>
                         EDC
-                    </a>
+                    </a>-->
 
 
                     <!-- ========================= -->
                     <!-- PROMO -->
                     <!-- ========================= -->
-
+                    <!--
                     <h6 class="collapse-header">
                         Promo
                     </h6>
@@ -267,12 +260,13 @@
                         <i class="fas fa-percent fa-fw mr-2"></i>
                         Total Diskon
                     </a>
+                    -->
 
 
                     <!-- ========================= -->
                     <!-- OPERASIONAL -->
                     <!-- ========================= -->
-
+                    <!--
                     <h6 class="collapse-header">
                         Operasional
                     </h6>
@@ -288,12 +282,12 @@
                         <i class="fas fa-undo fa-fw mr-2"></i>
                         Cancel / Refund
                     </a>
-
+                    -->
 
                     <!-- ========================= -->
                     <!-- PROFIT -->
                     <!-- ========================= -->
-
+                    <!--
                     <h6 class="collapse-header">
                         Profit
                     </h6>
@@ -309,6 +303,7 @@
                         <i class="fas fa-chart-pie fa-fw mr-2"></i>
                         Gross Profit
                     </a>
+                    -->
 
                 </div>
             </div>

@@ -116,7 +116,7 @@ class LaporanKategoriController extends Controller
             ->values()
             ->all();
 
-        return view('sb-admin-2.laporan.per-kategori', [
+        return view('admin.laporan.per-kategori', [
             'periode' => $periode,
             'keyword' => $keyword,
             'startDate' => $startDate,

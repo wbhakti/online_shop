@@ -106,7 +106,7 @@ class LaporanPenjualanController extends Controller
             ->orderBy('sale_date', 'asc')
             ->get();
 
-        return view('sb-admin-2.laporan.penjualan.periode', compact(
+        return view('admin.laporan.penjualan.periode', compact(
             'periode',
             'startDate',
             'endDate',
@@ -154,7 +154,7 @@ class LaporanPenjualanController extends Controller
             ->selectRaw('AVG(grand_total) as average_transaction')
             ->first();
 
-        return view('sb-admin-2.laporan.penjualan.perhari', compact(
+        return view('admin.laporan.penjualan.perhari', compact(
             'tanggal',
             'transactions',
             'summary'
@@ -212,7 +212,7 @@ class LaporanPenjualanController extends Controller
             ->sortByDesc('total_sales')
             ->first();
 
-        return view('sb-admin-2.laporan.penjualan.jam', compact(
+        return view('admin.laporan.penjualan.jam', compact(
             'tanggal',
             'hourlySales',
             'summary',

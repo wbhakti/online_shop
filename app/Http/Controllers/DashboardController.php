@@ -321,7 +321,7 @@ class DashboardController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        return view('sb-admin-2.dashboard', compact(
+        return view('admin.dashboard', compact(
             'totalSales',
             'salesGrowth',
             'totalTransactions',
